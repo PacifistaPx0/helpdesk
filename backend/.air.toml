@@ -15,7 +15,7 @@ tmp_dir = "tmp"
   rerun_delay = 500
   send_interrupt = true
   poll = true
-
+  poll_interval = 1000
 [color]
   app = ""
   build = "yellow"

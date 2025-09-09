@@ -131,7 +131,7 @@ func setupBasicRouter(cfg *config.Config) *gin.Engine {
 	// Basic health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":      "🚀 Hot reload is working this time i tell you!",
+			"status":      "Hot reload is working this time",
 			"timestamp":   time.Now().UTC(),
 			"environment": cfg.Environment,
 			"message":     "Health check updated via hot reload",

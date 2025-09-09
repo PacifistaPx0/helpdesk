@@ -28,7 +28,7 @@ services:
     image: redis:7-alpine
     container_name: helpdesk_redis
     ports:
-      - "${REDIS_PORT:-6380}:6379"  # External:Internal
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -41,35 +41,22 @@ services:
       timeout: 5s
       retries: 5
 
-  # Mailhog for email testing (development only)
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: helpdesk_mailhog
-    ports:
-      - "${MAILHOG_SMTP_PORT:-1025}:1025"  # SMTP port
-      - "${MAILHOG_WEB_PORT:-8025}:8025"   # Web UI port
-    networks:
-      - helpdesk_network
-    restart: unless-stopped
-    profiles:
-      - dev
-
-  # Backend API
+  # Backend API (Development with Hot Reload)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: development
     container_name: helpdesk_backend
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     env_file:
       - ./backend/.env
     environment:
-      # Override specific values for Docker environment
+      - ENVIRONMENT=development
+      - GIN_MODE=debug
       - DATABASE_URL=postgres://${POSTGRES_USER:-helpdesk_user}:${POSTGRES_PASSWORD:-helpdesk_password}@postgres:5432/${POSTGRES_DB:-helpdesk}?sslmode=disable
       - REDIS_URL=redis://redis:6379
-      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_HOST=mailhog
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,12 +67,44 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend:/app
-      - /app/tmp  # Exclude tmp directory
+      - /app/tmp
+    command: ["air", "-c", ".air.toml"]
+
+  # Mailhog for email testing
+  # mailhog:
+  #   image: mailhog/mailhog:latest
+  #   container_name: helpdesk_mailhog
+  #   ports:
+  #     - "${MAILHOG_SMTP_PORT:-1025}:1025"
+  #     - "${MAILHOG_WEB_PORT:-8025}:8025"
+  #   networks:
+  #     - helpdesk_network
+  #   restart: unless-stopped
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: helpdesk_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@helpdesk.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - helpdesk_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:
