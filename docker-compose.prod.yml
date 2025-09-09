@@ -1,0 +1,37 @@
+# Docker Compose override for production
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  backend:
+    build:
+      target: production
+    environment:
+      - ENVIRONMENT=production
+      - GIN_MODE=release
+    volumes: []  # No volume mounts in production
+    restart: always
+    profiles:
+      - production
+
+  # Remove mailhog in production (use real SMTP)
+  mailhog:
+    profiles:
+      - never  # This prevents mailhog from running in production
+
+  # Add reverse proxy/load balancer for production
+  nginx:
+    image: nginx:alpine
+    container_name: helpdesk_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - helpdesk_network
+    restart: always
+    profiles:
+      - production

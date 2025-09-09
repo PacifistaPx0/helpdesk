@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "Help Desk Database",
+            "Group": "Servers",
+            "Host": "helpdesk_postgres",
+            "Port": 5432,
+            "MaintenanceDB": "helpdesk",
+            "Username": "helpdesk_user",
+            "SSLMode": "prefer",
+            "Favorite": true
+        }
+    }
+}

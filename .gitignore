@@ -1,0 +1,62 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Docker Compose overrides
+docker-compose.override.yml
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node.js (for future frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Go backend specifics
+backend/tmp/
+backend/*.log
+backend/uploads/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+*.bak
+
+# Redis dump
+dump.rdb
+
+# Coverage reports
+coverage/
+*.cover
+*.coverprofile
+
+# Testing
+.nyc_output
+coverage.lcov
+
+.github
