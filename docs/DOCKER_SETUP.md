@@ -1,26 +1,23 @@
-# 🐳 Docker Setup for Help Desk System
+# Docker Setup for Help Desk System
 
 ## Overview
 
-This project uses Docker for consistent development and deployment environments. The setup follows lightweight principles with multi-stage builds and environment-specific configurations.
+This repository uses Docker Compose for development and production workflows. The current development Dockerfile is a single-stage image that installs Air for hot reload; volume mounts are used for fast local feedback during development.
 
-## 📁 Docker Structure
+## Project layout (relevant files)
 
 ```
 helpdesk/
-├── docker-compose.yml           # Base configuration
-├── docker-compose.dev.yml       # Development overrides
-├── docker-compose.prod.yml      # Production overrides
+├── docker-compose.yml           # Development and production configuration (single file)
 ├── docker/
-│   └── init/
-│       └── postgres/
-│           └── 01_init.sql      # Database initialization
+│   └── init/postgres/01_init.sql # Database initialization scripts
 ├── backend/
-│   ├── Dockerfile               # Multi-stage Go build
-│   └── .air.toml               # Hot reload configuration
-└── scripts/
-    ├── dev-setup.sh            # Linux/Mac setup script
-    └── dev-setup.bat           # Windows setup script
+│   ├── Dockerfile               # Single-stage development image (Air hot reload)
+│   └── .air.toml                # Air configuration for hot reload
+├── scripts/
+│   ├── dev-setup.sh            # Linux/Mac/WSL setup script
+│   └── dev-setup.bat           # Windows setup script
+└── .env                         # Environment variables used by docker-compose
 ```
 
 ## 🚀 Quick Start
@@ -329,3 +326,120 @@ docker volume prune -f
    - Disaster recovery plan
 
 This Docker setup provides a robust, scalable foundation for both development and production environments while maintaining the lightweight principles outlined in the project guidelines.
+
+## Quick start (development)
+
+### Option 1: Using setup scripts (recommended)
+
+```bash
+# Linux/Mac/WSL
+chmod +x scripts/dev-setup.sh
+./scripts/dev-setup.sh
+
+# Windows
+scripts\dev-setup.bat
+```
+
+The scripts will:
+- Check Docker is running
+- Copy `.env.example` to `.env` if needed
+- Build backend image with no cache
+- Start all services
+- Show service status and useful commands
+
+### Option 2: Manual setup
+
+1. Copy the example env and update values if needed:
+
+```bash
+cp .env.example .env
+# edit .env to set POSTGRES_PASSWORD, PGADMIN credentials, etc.
+```
+
+2. Build the backend image (no cache recommended during active development):
+
+```bash
+docker compose build --no-cache backend
+```
+
+3. Start the services (detached):
+
+```bash
+docker compose up -d
+```
+
+4. Follow backend logs:
+
+```bash
+docker compose logs -f backend
+```
+
+If you prefer to run the Go server locally and only need the DB/Redis, start only those services:
+
+```bash
+docker compose up -d postgres redis
+```
+
+## Services summary
+
+- PostgreSQL
+   - Port: mapped from `${POSTGRES_PORT}` in `.env` (default 5432)
+   - DB: `helpdesk`
+   - User: `${POSTGRES_USER}` (default `helpdesk_user`)
+   - Note: changing `POSTGRES_PASSWORD` in `.env` does not update an existing volume — use `ALTER USER` inside the running container to change passwords in-place.
+
+- Redis
+   - Port: mapped from `${REDIS_PORT}` (default 6380)
+
+- Backend API
+   - Port: mapped from `${BACKEND_PORT}` (default 8080)
+   - Health: `GET /health`
+   - Development hot reload: Air (configured in `backend/.air.toml`), the Dockerfile installs Air and the container runs `air -c .air.toml` by default.
+
+- pgAdmin
+   - URL: http://localhost:${PGADMIN_PORT} (default 5050)
+
+## Development workflow notes
+
+- Rebuild without cache when Dockerfile or dependencies change:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d --force-recreate backend
+```
+
+- Quick restart (no rebuild) when editing application code (Air should pick up changes):
+
+```bash
+docker compose restart backend
+```
+
+- To run Air locally (outside Docker):
+
+```bash
+# Ensure $GOBIN or $(go env GOPATH)/bin is on PATH
+go install github.com/air-verse/air@latest
+cd backend
+air -c .air.toml
+```
+
+## Recommended commands summary
+
+```bash
+# Build backend without cache and start
+docker compose build --no-cache backend
+docker compose up -d
+
+# Rebuild and force recreate backend container
+docker compose up -d --build --force-recreate backend
+
+# Restart backend only
+docker compose restart backend
+
+# Run Air locally
+cd backend && air -c .air.toml
+```
+
+---
+
+This file now reflects the current development Dockerfile (single-stage with Air) and the active docker-compose setup. Adjust `.env` values before running in your environment.
