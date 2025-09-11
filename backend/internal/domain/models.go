@@ -15,6 +15,36 @@ const (
 	EndUserRole UserRole = "end_user"
 )
 
+// JWT-related structures
+type TokenPair struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
+type JWTClaims struct {
+	UserID    uint     `json:"user_id"`
+	Email     string   `json:"email"`
+	Role      UserRole `json:"role"`
+	IsRefresh bool     `json:"is_refresh,omitempty"`
+}
+
+// LoginRequest represents the login payload
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+// RegisterRequest represents the registration payload
+type RegisterRequest struct {
+	Email      string   `json:"email" binding:"required,email"`
+	FirstName  string   `json:"first_name" binding:"required,min=2,max=50"`
+	LastName   string   `json:"last_name" binding:"required,min=2,max=50"`
+	Password   string   `json:"password" binding:"required,min=8"`
+	Department string   `json:"department" binding:"required"`
+	Role       UserRole `json:"role,omitempty"`
+}
+
 // User represents a user in the system
 type User struct {
 	ID         uint           `json:"id" gorm:"primaryKey"`

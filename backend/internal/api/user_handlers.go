@@ -11,82 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Auth handlers
-func registerHandler(userService *service.UserService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req struct {
-			Email      string          `json:"email" binding:"required,email"`
-			FirstName  string          `json:"first_name" binding:"required"`
-			LastName   string          `json:"last_name" binding:"required"`
-			Password   string          `json:"password" binding:"required,min=6"`
-			Role       domain.UserRole `json:"role"`
-			Department string          `json:"department"`
-		}
+// User management handlers (for admin/agent operations)
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		user := &domain.User{
-			Email:      req.Email,
-			FirstName:  req.FirstName,
-			LastName:   req.LastName,
-			Password:   req.Password,
-			Role:       req.Role,
-			Department: req.Department,
-		}
-
-		if user.Role == "" {
-			user.Role = domain.EndUserRole
-		}
-
-		err := userService.CreateUser(c.Request.Context(), user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-			return
-		}
-
-		// Don't return password in response
-		user.Password = ""
-		c.JSON(http.StatusCreated, user)
-	}
-}
-
-func loginHandler(userService *service.UserService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req struct {
-			Email    string `json:"email" binding:"required,email"`
-			Password string `json:"password" binding:"required"`
-		}
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		user, err := userService.AuthenticateUser(c.Request.Context(), req.Email, req.Password)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			return
-		}
-
-		// TODO: Generate JWT token
-		// token, err := auth.GenerateToken(user.ID, user.Role)
-		// if err != nil {
-		//     c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		//     return
-		// }
-
-		user.Password = ""
-		c.JSON(http.StatusOK, gin.H{
-			"user": user,
-			// "token": token,
-		})
-	}
-}
-
-// User handlers
 func listUsersHandler(userService *service.UserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Test hot reload - added logging
