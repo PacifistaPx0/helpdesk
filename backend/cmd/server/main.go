@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"helpdesk-backend/internal/api"
+	"helpdesk-backend/internal/auth"
 	"helpdesk-backend/internal/config"
 	"helpdesk-backend/internal/domain"
 	"helpdesk-backend/internal/repository"
@@ -159,7 +160,7 @@ func setupBasicRouter(cfg *config.Config) *gin.Engine {
 
 // This function will be used when database is available
 func setupFullAPI(router *gin.Engine, db *gorm.DB, cfg *config.Config) {
-	log.Println("🔧 Setting up API with database...")
+	log.Println("Setting up API with database...")
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
@@ -171,8 +172,15 @@ func setupFullAPI(router *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	ticketService := service.NewTicketService(ticketRepo)
 	commentService := service.NewCommentService(commentRepo)
 
-	// Setup API routes
-	api.SetupRoutes(router, userService, ticketService, commentService)
+	// Initialize JWT service
+	jwtService := auth.NewJWTService(
+		cfg.JWTSecret,
+		cfg.JWTAccessTokenExpiry,
+		cfg.JWTRefreshTokenExpiry,
+	)
 
-	log.Println("✅ Full API setup complete!")
+	// Setup API routes with JWT authentication
+	api.SetupRoutes(router, userService, ticketService, commentService, jwtService)
+
+	log.Println("SUCCESS: Full API setup complete with JWT authentication!")
 }
