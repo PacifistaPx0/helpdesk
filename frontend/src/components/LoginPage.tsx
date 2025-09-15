@@ -1,10 +1,11 @@
 import { useState } from 'react'
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => void
+  onLogin: (email: string, password: string) => Promise<void>
+  error?: string | null
 }
 
-export function LoginPage({ onLogin }: LoginProps) {
+export function LoginPage({ onLogin, error }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -15,11 +16,14 @@ export function LoginPage({ onLogin }: LoginProps) {
     e.preventDefault()
     setIsLoading(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    onLogin(email, password)
-    setIsLoading(false)
+    try {
+      await onLogin(email, password)
+    } catch (error) {
+      // Error handling is done in parent component
+      console.error('Login error:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -38,6 +42,22 @@ export function LoginPage({ onLogin }: LoginProps) {
 
         {/* Login Form */}
         <div className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"helpdesk-backend/internal/domain"
@@ -59,6 +60,16 @@ func (j *JWTService) GenerateTokenPair(user *domain.User) (*domain.TokenPair, er
 
 // generateToken creates a JWT token with the specified parameters
 func (j *JWTService) generateToken(user *domain.User, isRefresh bool, expiresAt time.Time) (string, error) {
+	now := time.Now()
+
+	// Debug logging
+	if isRefresh {
+		fmt.Printf("DEBUG: Refresh token - now: %v, expiresAt: %v, diff: %v\n",
+			now.Format(time.RFC3339),
+			expiresAt.Format(time.RFC3339),
+			expiresAt.Sub(now))
+	}
+
 	claims := Claims{
 		UserID:    user.ID,
 		Email:     user.Email,
@@ -66,8 +77,8 @@ func (j *JWTService) generateToken(user *domain.User, isRefresh bool, expiresAt 
 		IsRefresh: isRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    "helpdesk-backend",
 			Subject:   user.Email,
 		},

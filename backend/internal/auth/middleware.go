@@ -9,6 +9,56 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CORSMiddleware returns a gin middleware that allows requests from allowedOrigins.
+// allowedOrigins can be ["*"] or a list like ["http://localhost:5173","https://example.com"].
+func CORSMiddleware(allowedOrigins []string) gin.HandlerFunc {
+	// normalize allowedOrigins: trim spaces
+	for i := range allowedOrigins {
+		allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+	}
+
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		allowed := false
+
+		// If allowedOrigins is empty or contains "*", allow all origins.
+		if len(allowedOrigins) == 0 {
+			allowed = true
+		} else {
+			for _, o := range allowedOrigins {
+				if o == "*" || o == origin {
+					allowed = true
+					break
+				}
+			}
+		}
+
+		if allowed {
+			if origin == "" {
+				c.Header("Access-Control-Allow-Origin", "*")
+			} else {
+				c.Header("Access-Control-Allow-Origin", origin)
+			}
+		} else {
+			c.Header("Access-Control-Allow-Origin", "null")
+		}
+
+		c.Header("Vary", "Origin")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
+		c.Header("Access-Control-Expose-Headers", "Content-Length, Authorization")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // AuthMiddleware creates middleware for JWT authentication
 func AuthMiddleware(jwtService *JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {

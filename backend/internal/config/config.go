@@ -63,7 +63,7 @@ func Load() (*Config, error) {
 
 	// Parse JWT token expiry
 	accessTokenExpiry, _ := time.ParseDuration(getEnv("JWT_ACCESS_TOKEN_EXPIRY", "15m"))
-	refreshTokenExpiry, _ := time.ParseDuration(getEnv("JWT_REFRESH_TOKEN_EXPIRY", "7d"))
+	refreshTokenExpiry, _ := time.ParseDuration(getEnv("JWT_REFRESH_TOKEN_EXPIRY", "168h"))
 
 	// Parse rate limiting
 	rateLimitWindow, _ := time.ParseDuration(getEnv("RATE_LIMIT_WINDOW", "1h"))

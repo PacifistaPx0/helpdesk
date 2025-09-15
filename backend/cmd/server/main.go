@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -128,6 +129,16 @@ func initDatabase(databaseURL string) (*gorm.DB, error) {
 
 func setupBasicRouter(cfg *config.Config) *gin.Engine {
 	router := gin.Default()
+
+	// Enable CORS middleware reading FRONTEND_URL from environment (comma separated)
+	frontend := os.Getenv("FRONTEND_URL")
+	var origins []string
+	if frontend == "" {
+		origins = []string{"*"}
+	} else {
+		origins = strings.Split(frontend, ",")
+	}
+	router.Use(auth.CORSMiddleware(origins))
 
 	// Basic health check endpoint
 	router.GET("/health", func(c *gin.Context) {

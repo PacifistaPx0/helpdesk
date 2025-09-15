@@ -1,69 +1,81 @@
+import { useState, useEffect } from 'react'
+import { ticketsApi, type Ticket } from '../services/api'
+
 interface DashboardOverviewProps {
   stats: {
     totalTickets: number
     openTickets: number
     assignedToMe: number
     slaBreaches: number
+    resolvedToday?: number
+    averageResolutionTime?: number
   }
 }
 
 export function DashboardOverview({ stats }: DashboardOverviewProps) {
-  const recentTickets = [
-    {
-      id: '#001',
-      title: 'Cannot access email',
-      requester: 'John Doe',
-      department: 'IT Department',
-      status: 'Open',
-      priority: 'High',
-      created: '2 hours ago',
-      slaStatus: 'warning'
-    },
-    {
-      id: '#002',
-      title: 'Software installation request',
-      requester: 'Jane Smith',
-      department: 'Marketing',
-      status: 'In Progress',
-      priority: 'Medium',
-      created: '4 hours ago',
-      slaStatus: 'ok'
-    },
-    {
-      id: '#003',
-      title: 'Network connectivity issue',
-      requester: 'Mike Johnson',
-      department: 'Sales',
-      status: 'Resolved',
-      priority: 'Low',
-      created: '1 day ago',
-      slaStatus: 'ok'
-    },
-    {
-      id: '#004',
-      title: 'Printer not working',
-      requester: 'Sarah Wilson',
-      department: 'HR',
-      status: 'Open',
-      priority: 'Medium',
-      created: '30 minutes ago',
-      slaStatus: 'ok'
-    },
-    {
-      id: '#005',
-      title: 'Password reset request',
-      requester: 'Tom Brown',
-      department: 'Finance',
-      status: 'Resolved',
-      priority: 'Low',
-      created: '3 hours ago',
-      slaStatus: 'ok'
+  const [recentTickets, setRecentTickets] = useState<Ticket[]>([])
+  const [loadingTickets, setLoadingTickets] = useState(true)
+
+  useEffect(() => {
+    const loadRecentTickets = async () => {
+      try {
+        const tickets = await ticketsApi.getRecentTickets(5)
+        setRecentTickets(tickets)
+      } catch (error) {
+        console.error('Failed to load recent tickets:', error)
+        // Fallback to mock data
+        setRecentTickets([
+          {
+            id: '1',
+            title: 'Cannot access email',
+            description: 'User cannot access their email account',
+            status: 'Open',
+            priority: 'High',
+            category: 'Email',
+            requesterID: 'user1',
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            updatedAt: new Date().toISOString(),
+            requester: {
+              id: 'user1',
+              email: 'john.doe@company.com',
+              firstName: 'John',
+              lastName: 'Doe',
+              role: 'EndUser',
+              department: 'IT Department',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          }
+        ])
+      } finally {
+        setLoadingTickets(false)
+      }
     }
-  ]
+
+    loadRecentTickets()
+  }, [])
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffMs = now.getTime() - date.getTime()
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    } else if (diffHours > 0) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    } else {
+      const diffMinutes = Math.floor(diffMs / (1000 * 60))
+      return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Open': return 'bg-yellow-100 text-yellow-800'
+      case 'InProgress': 
       case 'In Progress': return 'bg-blue-100 text-blue-800'
       case 'Resolved': return 'bg-green-100 text-green-800'
       case 'Closed': return 'bg-gray-100 text-gray-800'
@@ -73,6 +85,7 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
+      case 'Critical': return 'bg-purple-100 text-purple-800'
       case 'High': return 'bg-red-100 text-red-800'
       case 'Medium': return 'bg-yellow-100 text-yellow-800'
       case 'Low': return 'bg-green-100 text-green-800'
@@ -268,47 +281,69 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
           </div>
         </div>
         <ul className="divide-y divide-gray-200">
-          {recentTickets.map((ticket) => (
-            <li key={ticket.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center min-w-0 flex-1">
-                  <div className="flex-shrink-0 h-10 w-10">
-                    <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary-600">{ticket.id}</span>
-                    </div>
-                  </div>
-                  <div className="ml-4 min-w-0 flex-1">
-                    <div className="flex items-center">
-                      <p className="text-sm font-medium text-gray-900 truncate">{ticket.title}</p>
-                      {ticket.slaStatus === 'warning' && (
-                        <svg className="ml-2 h-4 w-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <p className="text-sm text-gray-500">{ticket.requester} • {ticket.department}</p>
-                      <span className="mx-2 text-gray-300">•</span>
-                      <p className="text-sm text-gray-500">{ticket.created}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 ml-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                    {ticket.status}
-                  </span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                    {ticket.priority}
-                  </span>
-                  <button className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                </div>
+          {loadingTickets ? (
+            <li className="px-4 py-8 sm:px-6">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                <span className="ml-2 text-gray-500">Loading tickets...</span>
               </div>
             </li>
-          ))}
+          ) : recentTickets.length === 0 ? (
+            <li className="px-4 py-8 sm:px-6">
+              <div className="text-center">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m6-6v6m0 0v6m0-6h6m-6 0H4" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets</h3>
+                <p className="mt-1 text-sm text-gray-500">Get started by creating a new ticket.</p>
+              </div>
+            </li>
+          ) : (
+            recentTickets.map((ticket) => (
+              <li key={ticket.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center min-w-0 flex-1">
+                    <div className="flex-shrink-0 h-10 w-10">
+                      <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary-600">#{ticket.id.slice(-3)}</span>
+                      </div>
+                    </div>
+                    <div className="ml-4 min-w-0 flex-1">
+                      <div className="flex items-center">
+                        <p className="text-sm font-medium text-gray-900 truncate">{ticket.title}</p>
+                        {ticket.priority === 'High' && (
+                          <svg className="ml-2 h-4 w-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        <p className="text-sm text-gray-500">
+                          {ticket.requester ? `${ticket.requester.firstName} ${ticket.requester.lastName}` : 'Unknown'} • 
+                          {ticket.requester?.department || 'No Department'}
+                        </p>
+                        <span className="mx-2 text-gray-300">•</span>
+                        <p className="text-sm text-gray-500">{formatTimeAgo(ticket.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                      {ticket.status === 'InProgress' ? 'In Progress' : ticket.status}
+                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
+                      {ticket.priority}
+                    </span>
+                    <button className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))
+          )}
         </ul>
         <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
