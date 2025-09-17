@@ -348,7 +348,7 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
         <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Showing 5 of {stats.totalTickets} tickets
+            {stats.totalTickets >= 5 ? ` 5 of ${stats.totalTickets} ` : ` ${stats.totalTickets} `}tickets
             </div>
             <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-500">
               View all tickets →

@@ -70,6 +70,73 @@ func (s *TicketService) AssignTicket(ctx context.Context, ticketID, assigneeID u
 	return s.ticketRepo.Update(ctx, ticket)
 }
 
+// GetDashboardStats returns statistics for the dashboard
+func (s *TicketService) GetDashboardStats(ctx context.Context, userID uint, userRole domain.UserRole) (*DashboardStats, error) {
+	stats := &DashboardStats{}
+
+	// Get total tickets count
+	totalTickets, err := s.ticketRepo.GetTotalCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.TotalTickets = totalTickets
+
+	// Get open tickets count
+	openTickets, err := s.ticketRepo.GetCountByStatus(ctx, domain.OpenStatus)
+	if err != nil {
+		return nil, err
+	}
+	stats.OpenTickets = openTickets
+
+	// Get tickets assigned to current user (only for agents and admins)
+	var assignedToMe int
+	if userRole == domain.AgentRole || userRole == domain.AdminRole {
+		assignedToMe, err = s.ticketRepo.GetCountByAssignee(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	stats.AssignedToMe = assignedToMe
+
+	// Get SLA breaches count
+	slaBreaches, err := s.ticketRepo.GetSLABreachesCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.SLABreaches = slaBreaches
+
+	// Get tickets resolved today
+	resolvedToday, err := s.ticketRepo.GetResolvedTodayCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.ResolvedToday = resolvedToday
+
+	// Calculate average resolution time (in hours)
+	avgResolutionTime, err := s.ticketRepo.GetAverageResolutionTime(ctx)
+	if err != nil {
+		avgResolutionTime = 0 // Default to 0 if calculation fails
+	}
+	stats.AverageResolutionTime = avgResolutionTime
+
+	return stats, nil
+}
+
+// GetRecentTickets returns the most recent tickets with limit
+func (s *TicketService) GetRecentTickets(ctx context.Context, limit int) ([]domain.Ticket, error) {
+	return s.ticketRepo.GetRecentTickets(ctx, limit)
+}
+
+// DashboardStats represents the statistics for the dashboard
+type DashboardStats struct {
+	TotalTickets          int `json:"totalTickets"`
+	OpenTickets           int `json:"openTickets"`
+	AssignedToMe          int `json:"assignedToMe"`
+	SLABreaches           int `json:"slaBreaches"`
+	ResolvedToday         int `json:"resolvedToday"`
+	AverageResolutionTime int `json:"averageResolutionTime"`
+}
+
 // getSLAHours returns the SLA hours based on priority
 func (s *TicketService) getSLAHours(priority domain.TicketPriority) int {
 	switch priority {

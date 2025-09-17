@@ -1,22 +1,13 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './components/LoginPage'
-import { DashboardLayout } from './components/DashboardLayout'
-import { DashboardOverview } from './components/DashboardOverview'
-import { authApi, dashboardApi, type User, type DashboardStats, ApiErrorClass } from './services/api'
+import { Dashboard } from './components/Dashboard'
+import { authApi, type User } from './services/api'
 import './App.css'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<DashboardStats>({
-    totalTickets: 0,
-    openTickets: 0,
-    assignedToMe: 0,
-    slaBreaches: 0,
-    resolvedToday: 0,
-    averageResolutionTime: 0
-  })
-  const [error, setError] = useState<string | null>(null)
 
   // Check if user is already logged in on app start
   useEffect(() => {
@@ -26,7 +17,6 @@ function App() {
         if (token) {
           const userProfile = await authApi.getProfile()
           setUser(userProfile)
-          await loadDashboardData()
         }
       } catch (error) {
         console.error('Auth check failed:', error)
@@ -41,37 +31,12 @@ function App() {
     checkAuth()
   }, [])
 
-  const loadDashboardData = async () => {
-    try {
-      const dashboardStats = await dashboardApi.getStats()
-      setStats(dashboardStats)
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error)
-      // Use fallback data if API fails
-      setStats({
-        totalTickets: 45,
-        openTickets: 12,
-        assignedToMe: 8,
-        slaBreaches: 2,
-        resolvedToday: 5,
-        averageResolutionTime: 24
-      })
-    }
-  }
-
   const handleLogin = async (email: string, password: string) => {
     try {
-      setError(null)
       const loginResponse = await authApi.login(email, password)
       setUser(loginResponse.user)
-      await loadDashboardData()
     } catch (error) {
       console.error('Login failed:', error)
-      if (error instanceof ApiErrorClass) {
-        setError(error.message)
-      } else {
-        setError('Login failed. Please check your credentials and try again.')
-      }
       throw error // Re-throw to let LoginPage handle loading state
     }
   }
@@ -83,14 +48,6 @@ function App() {
       console.error('Logout error:', error)
     } finally {
       setUser(null)
-      setStats({
-        totalTickets: 0,
-        openTickets: 0,
-        assignedToMe: 0,
-        slaBreaches: 0,
-        resolvedToday: 0,
-        averageResolutionTime: 0
-      })
     }
   }
 
@@ -106,21 +63,32 @@ function App() {
     )
   }
 
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} error={error} />
-  }
-
   return (
-    <DashboardLayout 
-      user={{
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        role: user.role
-      }} 
-      onLogout={handleLogout}
-    >
-      <DashboardOverview stats={stats} />
-    </DashboardLayout>
+    <Router>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage onLogin={handleLogin} />
+            )
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            user ? (
+              <Dashboard user={user} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+      </Routes>
+    </Router>
   )
 }
 

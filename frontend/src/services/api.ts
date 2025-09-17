@@ -59,6 +59,35 @@ export interface Ticket {
   slaBreachTime?: string
 }
 
+// Backend ticket type (matches Go struct)
+interface BackendTicket {
+  id: number
+  title: string
+  description: string
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  category: string
+  assigned_to?: number
+  requester_id: number
+  requester?: BackendUser
+  created_at: string
+  updated_at: string
+  resolved_at?: string
+  sla_breach_at?: string
+}
+
+// Backend user type (matches Go struct)
+interface BackendUser {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  role: 'Admin' | 'Agent' | 'EndUser'
+  department?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface DashboardStats {
   totalTickets: number
   openTickets: number
@@ -66,6 +95,52 @@ export interface DashboardStats {
   slaBreaches: number
   resolvedToday: number
   averageResolutionTime: number
+}
+
+// Transformation functions to convert between backend and frontend formats
+function transformBackendUser(backendUser: BackendUser): User {
+  return {
+    id: backendUser.id.toString(),
+    email: backendUser.email,
+    firstName: backendUser.first_name,
+    lastName: backendUser.last_name,
+    role: backendUser.role,
+    department: backendUser.department,
+    createdAt: backendUser.created_at,
+    updatedAt: backendUser.updated_at
+  }
+}
+
+function transformBackendTicket(backendTicket: BackendTicket): Ticket {
+  const statusMap: Record<string, 'Open' | 'InProgress' | 'Resolved' | 'Closed'> = {
+    'open': 'Open',
+    'in_progress': 'InProgress', 
+    'resolved': 'Resolved',
+    'closed': 'Closed'
+  }
+  
+  const priorityMap: Record<string, 'Low' | 'Medium' | 'High' | 'Critical'> = {
+    'low': 'Low',
+    'medium': 'Medium',
+    'high': 'High', 
+    'critical': 'Critical'
+  }
+
+  return {
+    id: backendTicket.id.toString(),
+    title: backendTicket.title,
+    description: backendTicket.description,
+    status: statusMap[backendTicket.status] || 'Open',
+    priority: priorityMap[backendTicket.priority] || 'Low',
+    category: backendTicket.category,
+    assignedTo: backendTicket.assigned_to?.toString(),
+    requesterID: backendTicket.requester_id.toString(),
+    requester: backendTicket.requester ? transformBackendUser(backendTicket.requester) : undefined,
+    createdAt: backendTicket.created_at,
+    updatedAt: backendTicket.updated_at,
+    resolvedAt: backendTicket.resolved_at,
+    slaBreachTime: backendTicket.sla_breach_at
+  }
 }
 
 // API Client class
@@ -207,7 +282,7 @@ class ApiClient {
   }
 
   async getProfile(): Promise<User> {
-    return this.request<User>('/auth/profile')
+    return this.request<User>('/profile')
   }
 
   // Ticket methods
@@ -225,13 +300,19 @@ class ApiClient {
     if (params?.limit) searchParams.append('limit', params.limit.toString())
 
     const query = searchParams.toString()
-    return this.request<{ tickets: Ticket[]; total: number; page: number; limit: number }>(
+    const response = await this.request<{ tickets: BackendTicket[]; total: number; page: number; limit: number }>(
       `/tickets${query ? `?${query}` : ''}`
     )
+    
+    return {
+      ...response,
+      tickets: response.tickets.map(transformBackendTicket)
+    }
   }
 
   async getTicket(id: string): Promise<Ticket> {
-    return this.request<Ticket>(`/tickets/${id}`)
+    const backendTicket = await this.request<BackendTicket>(`/tickets/${id}`)
+    return transformBackendTicket(backendTicket)
   }
 
   async createTicket(ticket: {
@@ -259,7 +340,8 @@ class ApiClient {
   }
 
   async getRecentTickets(limit: number = 5): Promise<Ticket[]> {
-    return this.request<Ticket[]>(`/tickets/recent?limit=${limit}`)
+    const backendTickets = await this.request<BackendTicket[]>(`/tickets/recent?limit=${limit}`)
+    return backendTickets.map(transformBackendTicket)
   }
 }
 

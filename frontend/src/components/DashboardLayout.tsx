@@ -23,7 +23,7 @@ export function DashboardLayout({ children, user, onLogout }: DashboardLayoutPro
   ]
 
   const filteredNavigation = navigation.filter(item => 
-    !item.roles || item.roles.includes(user.role.toLowerCase())
+    !item.roles || (user?.role && item.roles.includes(user.role.toLowerCase()))
   )
 
   return (

@@ -28,7 +28,7 @@ func SetupRoutes(router *gin.Engine, userService *service.UserService, ticketSer
 	}
 
 	// Protected routes (require authentication)
-	protected := api.Group("/")
+	protected := api.Group("")
 	protected.Use(auth.AuthMiddleware(jwtService))
 	{
 		// Profile route
@@ -48,10 +48,17 @@ func SetupRoutes(router *gin.Engine, userService *service.UserService, ticketSer
 		{
 			tickets.POST("", createTicketHandler(ticketService))
 			tickets.GET("", listTicketsHandler(ticketService))
+			tickets.GET("/recent", getRecentTicketsHandler(ticketService))
 			tickets.GET("/:id", getTicketHandler(ticketService))
 			tickets.PUT("/:id", updateTicketHandler(ticketService))
 			tickets.DELETE("/:id", auth.RequireAdminOrAgent(), deleteTicketHandler(ticketService))
 			tickets.POST("/:id/assign", auth.RequireAdminOrAgent(), assignTicketHandler(ticketService))
+		}
+
+		// Dashboard routes
+		dashboard := protected.Group("/dashboard")
+		{
+			dashboard.GET("/stats", getDashboardStatsHandler(ticketService))
 		}
 
 		// Comment routes
