@@ -85,7 +85,7 @@ type Ticket struct {
 	ID          uint           `json:"id" gorm:"primaryKey"`
 	Title       string         `json:"title" gorm:"not null"`
 	Description string         `json:"description" gorm:"type:text"`
-	Status      TicketStatus   `json:"status" gorm:"not null;default:'open'"`
+	Status      TicketStatus   `json:"status" gorm:"not null;default:'open';index"`
 	Priority    TicketPriority `json:"priority" gorm:"not null;default:'medium'"`
 	Category    string         `json:"category"`
 
@@ -97,7 +97,7 @@ type Ticket struct {
 	Assignee   *User `json:"assignee,omitempty" gorm:"foreignKey:AssigneeID"`
 
 	// SLA fields
-	SLABreachAt *time.Time `json:"sla_breach_at"`
+	SLABreachAt *time.Time `json:"sla_breach_at" gorm:"index"`
 	ResolvedAt  *time.Time `json:"resolved_at"`
 
 	// Timestamps

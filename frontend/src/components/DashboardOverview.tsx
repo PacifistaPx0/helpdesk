@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ticketsApi, type Ticket } from '../services/api'
+import { TicketDetailModal } from './TicketDetailModal'
 
 interface DashboardOverviewProps {
   stats: {
@@ -12,48 +13,48 @@ interface DashboardOverviewProps {
   }
 }
 
+// Add ticket filter state type
+interface TicketFilter {
+  status?: 'Open' | 'InProgress' | 'Resolved' | 'Closed'
+  assignedToMe?: boolean
+  slaBreached?: boolean
+  limit?: number
+}
+
 export function DashboardOverview({ stats }: DashboardOverviewProps) {
   const [recentTickets, setRecentTickets] = useState<Ticket[]>([])
   const [loadingTickets, setLoadingTickets] = useState(true)
+  const [ticketFilter, setTicketFilter] = useState<TicketFilter>({ limit: 5 })
+  
+  // Modal state
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  
+  // Dropdown state for each ticket
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   useEffect(() => {
     const loadRecentTickets = async () => {
+      setLoadingTickets(true)
       try {
-        const tickets = await ticketsApi.getRecentTickets(5)
-        setRecentTickets(tickets)
+        // Use ticketsApi.getTickets with filter parameters instead of getRecentTickets
+        const response = await ticketsApi.getTickets({
+          status: ticketFilter.status,
+          assignedToMe: ticketFilter.assignedToMe,
+          slaBreached: ticketFilter.slaBreached,
+          page: 1,
+          limit: ticketFilter.limit || 5
+        })
+        setRecentTickets(response.tickets)
       } catch (error) {
-        console.error('Failed to load recent tickets:', error)
-        // Fallback to mock data
-        setRecentTickets([
-          {
-            id: '1',
-            title: 'Cannot access email',
-            description: 'User cannot access their email account',
-            status: 'Open',
-            priority: 'High',
-            category: 'Email',
-            requesterID: 'user1',
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-            updatedAt: new Date().toISOString(),
-            requester: {
-              id: 'user1',
-              email: 'john.doe@company.com',
-              firstName: 'John',
-              lastName: 'Doe',
-              role: 'EndUser',
-              department: 'IT Department',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          }
-        ])
+        console.error('Failed to load tickets:', error)
       } finally {
         setLoadingTickets(false)
       }
     }
 
     loadRecentTickets()
-  }, [])
+  }, [ticketFilter]) // Re-run when filter changes
 
   const formatTimeAgo = (dateString: string) => {
     const now = new Date()
@@ -92,6 +93,74 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
       default: return 'bg-gray-100 text-gray-800'
     }
   }
+
+  // Dashboard card click handlers
+  const handleViewAll = () => {
+    setTicketFilter({ limit: 10 }) // Show more tickets, all statuses
+  }
+
+  const handleViewOpen = () => {
+    setTicketFilter({ status: 'Open', limit: 5 })
+  }
+
+  const handleViewAssignedToMe = () => {
+    setTicketFilter({ assignedToMe: true, limit: 5 })
+  }
+
+  const handleViewBreaches = () => {
+    setTicketFilter({ slaBreached: true, limit: 5 })
+  }
+
+  const handleViewAllTickets = () => {
+    // TODO: Navigate to dedicated tickets page
+    console.log('Navigate to full tickets page')
+  }
+
+  const resetFilter = () => {
+    setTicketFilter({ limit: 5 })
+  }
+
+  // Ticket action handlers
+  const handleViewTicket = (ticketId: string) => {
+    setSelectedTicketId(ticketId)
+    setIsTicketModalOpen(true)
+    setOpenDropdown(null)
+  }
+
+  const handleTicketRowClick = (ticketId: string) => {
+    handleViewTicket(ticketId)
+  }
+
+  const handleTicketUpdated = (updatedTicket: Ticket) => {
+    // Update the ticket in the list
+    setRecentTickets(tickets => 
+      tickets.map(ticket => 
+        ticket.id === updatedTicket.id ? updatedTicket : ticket
+      )
+    )
+  }
+
+  const handleQuickStatusUpdate = async (ticketId: string, newStatus: Ticket['status']) => {
+    try {
+      const updatedTicket = await ticketsApi.updateTicket(ticketId, { status: newStatus })
+      handleTicketUpdated(updatedTicket)
+      setOpenDropdown(null)
+    } catch (error) {
+      console.error('Failed to update ticket status:', error)
+    }
+  }
+
+  const toggleDropdown = (ticketId: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    setOpenDropdown(openDropdown === ticketId ? null : ticketId)
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenDropdown(null)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -148,7 +217,12 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-900">View all</a>
+              <button 
+                onClick={handleViewAll}
+                className="font-medium text-primary-600 hover:text-primary-900 focus:outline-none focus:underline"
+              >
+                View all
+              </button>
             </div>
           </div>
         </div>
@@ -182,7 +256,12 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-900">View open</a>
+              <button 
+                onClick={handleViewOpen}
+                className="font-medium text-primary-600 hover:text-primary-900 focus:outline-none focus:underline"
+              >
+                View open
+              </button>
             </div>
           </div>
         </div>
@@ -216,7 +295,12 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-900">View mine</a>
+              <button 
+                onClick={handleViewAssignedToMe}
+                className="font-medium text-primary-600 hover:text-primary-900 focus:outline-none focus:underline"
+              >
+                View mine
+              </button>
             </div>
           </div>
         </div>
@@ -250,7 +334,12 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <a href="#" className="font-medium text-red-600 hover:text-red-900">View breaches</a>
+              <button 
+                onClick={handleViewBreaches}
+                className="font-medium text-red-600 hover:text-red-900 focus:outline-none focus:underline"
+              >
+                View breaches
+              </button>
             </div>
           </div>
         </div>
@@ -261,10 +350,38 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Tickets</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Recent Tickets
+                {ticketFilter.status && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {ticketFilter.status}
+                  </span>
+                )}
+                {ticketFilter.assignedToMe && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Assigned to Me
+                  </span>
+                )}
+                {ticketFilter.slaBreached && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    SLA Breached
+                  </span>
+                )}
+              </h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">Latest ticket activity and updates</p>
             </div>
             <div className="flex space-x-2">
+              {(ticketFilter.status || ticketFilter.assignedToMe || ticketFilter.slaBreached) && (
+                <button 
+                  onClick={resetFilter}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear Filter
+                </button>
+              )}
               <button className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                 <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
@@ -300,8 +417,11 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
             </li>
           ) : (
             recentTickets.map((ticket) => (
-              <li key={ticket.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
+              <li key={ticket.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors cursor-pointer relative">
+                <div 
+                  className="flex items-center justify-between"
+                  onClick={() => handleTicketRowClick(ticket.id)}
+                >
                   <div className="flex items-center min-w-0 flex-1">
                     <div className="flex-shrink-0 h-10 w-10">
                       <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
@@ -334,11 +454,84 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
                       {ticket.priority}
                     </span>
-                    <button className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    <div className="relative">
+                      <button 
+                        onClick={(e) => toggleDropdown(ticket.id, e)}
+                        className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {openDropdown === ticket.id && (
+                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10">
+                          <div className="py-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewTicket(ticket.id)
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View Details
+                            </button>
+                            
+                            {ticket.status !== 'InProgress' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleQuickStatusUpdate(ticket.id, 'InProgress')
+                                }}
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Mark In Progress
+                              </button>
+                            )}
+                            
+                            {ticket.status !== 'Resolved' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleQuickStatusUpdate(ticket.id, 'Resolved')
+                                }}
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Mark Resolved
+                              </button>
+                            )}
+                            
+                            <div className="border-t border-gray-100"></div>
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewTicket(ticket.id)
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit Ticket
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>
@@ -348,14 +541,31 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
         <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-            {stats.totalTickets >= 5 ? ` 5 of ${stats.totalTickets} ` : ` ${stats.totalTickets} `}tickets
+              Showing {recentTickets.length} of {stats.totalTickets} tickets
+              {ticketFilter.status && ` (${ticketFilter.status})`}
+              {ticketFilter.assignedToMe && ` (Assigned to Me)`}
+              {ticketFilter.slaBreached && ` (SLA Breached)`}
             </div>
-            <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-500">
+            <button 
+              onClick={handleViewAllTickets}
+              className="text-sm font-medium text-primary-600 hover:text-primary-500 focus:outline-none focus:underline"
+            >
               View all tickets →
-            </a>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Ticket Detail Modal */}
+      <TicketDetailModal
+        isOpen={isTicketModalOpen}
+        ticketId={selectedTicketId}
+        onClose={() => {
+          setIsTicketModalOpen(false)
+          setSelectedTicketId(null)
+        }}
+        onTicketUpdated={handleTicketUpdated}
+      />
     </div>
   )
 }

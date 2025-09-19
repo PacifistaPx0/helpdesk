@@ -3,7 +3,10 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
+	"helpdesk-backend/internal/auth"
 	"helpdesk-backend/internal/domain"
 	"helpdesk-backend/internal/service"
 
@@ -52,18 +55,37 @@ func listTicketsHandler(ticketService *service.TicketService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+		// Get filter parameters
+		status := c.Query("status")
+		assignedToMe := c.Query("assignedToMe") == "true"
+		slaBreached := c.Query("slaBreached") == "true"
 		requesterID := c.Query("requester_id")
 		assigneeID := c.Query("assignee_id")
+
+		// Get current user ID for assignedToMe filter
+		var currentUserID uint
+		if assignedToMe {
+			userID, exists := auth.GetCurrentUserID(c)
+			if !exists {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+				return
+			}
+			currentUserID = userID
+		}
 
 		var tickets []domain.Ticket
 		var err error
 
+		// Handle different filtering scenarios
 		if requesterID != "" {
 			id, _ := strconv.ParseUint(requesterID, 10, 32)
 			tickets, err = ticketService.ListTicketsByRequester(c.Request.Context(), uint(id), limit, offset)
 		} else if assigneeID != "" {
 			id, _ := strconv.ParseUint(assigneeID, 10, 32)
 			tickets, err = ticketService.ListTicketsByAssignee(c.Request.Context(), uint(id), limit, offset)
+		} else if assignedToMe {
+			tickets, err = ticketService.ListTicketsByAssignee(c.Request.Context(), currentUserID, limit, offset)
 		} else {
 			tickets, err = ticketService.ListTickets(c.Request.Context(), limit, offset)
 		}
@@ -73,7 +95,31 @@ func listTicketsHandler(ticketService *service.TicketService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, tickets)
+		// Apply additional filters after getting the tickets
+		filteredTickets := tickets
+		if status != "" {
+			var statusFiltered []domain.Ticket
+			for _, ticket := range filteredTickets {
+				if string(ticket.Status) == strings.ToLower(status) {
+					statusFiltered = append(statusFiltered, ticket)
+				}
+			}
+			filteredTickets = statusFiltered
+		}
+
+		if slaBreached {
+			var slaFiltered []domain.Ticket
+			now := time.Now()
+			for _, ticket := range filteredTickets {
+				if ticket.SLABreachAt != nil && now.After(*ticket.SLABreachAt) &&
+					ticket.Status != domain.ResolvedStatus && ticket.Status != domain.ClosedStatus {
+					slaFiltered = append(slaFiltered, ticket)
+				}
+			}
+			filteredTickets = slaFiltered
+		}
+
+		c.JSON(http.StatusOK, filteredTickets)
 	}
 }
 

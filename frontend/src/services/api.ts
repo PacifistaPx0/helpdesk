@@ -289,6 +289,7 @@ class ApiClient {
   async getTickets(params?: {
     status?: string
     assignedToMe?: boolean
+    slaBreached?: boolean
     page?: number
     limit?: number
   }): Promise<{ tickets: Ticket[]; total: number; page: number; limit: number }> {
@@ -296,17 +297,30 @@ class ApiClient {
     
     if (params?.status) searchParams.append('status', params.status)
     if (params?.assignedToMe) searchParams.append('assignedToMe', 'true')
+    if (params?.slaBreached) searchParams.append('slaBreached', 'true')
     if (params?.page) searchParams.append('page', params.page.toString())
     if (params?.limit) searchParams.append('limit', params.limit.toString())
 
     const query = searchParams.toString()
-    const response = await this.request<{ tickets: BackendTicket[]; total: number; page: number; limit: number }>(
+    const response = await this.request<BackendTicket[] | { tickets: BackendTicket[]; total: number; page: number; limit: number }>(
       `/tickets${query ? `?${query}` : ''}`
     )
     
-    return {
-      ...response,
-      tickets: response.tickets.map(transformBackendTicket)
+    // Handle both array response and object response formats
+    if (Array.isArray(response)) {
+      // Backend returns simple array
+      return {
+        tickets: response.map(transformBackendTicket),
+        total: response.length,
+        page: 1,
+        limit: response.length
+      }
+    } else {
+      // Backend returns structured response
+      return {
+        ...response,
+        tickets: (response.tickets || []).map(transformBackendTicket)
+      }
     }
   }
 
@@ -328,10 +342,41 @@ class ApiClient {
   }
 
   async updateTicket(id: string, updates: Partial<Ticket>): Promise<Ticket> {
-    return this.request<Ticket>(`/tickets/${id}`, {
+    // Transform frontend format to backend format
+    const backendUpdates: any = {}
+    
+    if (updates.title !== undefined) backendUpdates.title = updates.title
+    if (updates.description !== undefined) backendUpdates.description = updates.description
+    if (updates.category !== undefined) backendUpdates.category = updates.category
+    
+    // Transform status to backend format
+    if (updates.status !== undefined) {
+      const statusMap: Record<string, string> = {
+        'Open': 'open',
+        'InProgress': 'in_progress',
+        'Resolved': 'resolved',
+        'Closed': 'closed'
+      }
+      backendUpdates.status = statusMap[updates.status] || updates.status.toLowerCase()
+    }
+    
+    // Transform priority to backend format
+    if (updates.priority !== undefined) {
+      const priorityMap: Record<string, string> = {
+        'Low': 'low',
+        'Medium': 'medium',
+        'High': 'high',
+        'Critical': 'critical'
+      }
+      backendUpdates.priority = priorityMap[updates.priority] || updates.priority.toLowerCase()
+    }
+
+    const backendTicket = await this.request<BackendTicket>(`/tickets/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(backendUpdates),
     })
+    
+    return transformBackendTicket(backendTicket)
   }
 
   // Dashboard methods
@@ -341,7 +386,7 @@ class ApiClient {
 
   async getRecentTickets(limit: number = 5): Promise<Ticket[]> {
     const backendTickets = await this.request<BackendTicket[]>(`/tickets/recent?limit=${limit}`)
-    return backendTickets.map(transformBackendTicket)
+    return (backendTickets || []).map(transformBackendTicket)
   }
 }
 

@@ -89,7 +89,7 @@ func (r *TicketRepository) GetCountByAssignee(ctx context.Context, assigneeID ui
 func (r *TicketRepository) GetSLABreachesCount(ctx context.Context) (int, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&domain.Ticket{}).
-		Where("sla_breach_at < ? AND status NOT IN (?)", "NOW()", []domain.TicketStatus{domain.ResolvedStatus, domain.ClosedStatus}).
+		Where("sla_breach_at < ? AND status NOT IN (?)", time.Now(), []domain.TicketStatus{domain.ResolvedStatus, domain.ClosedStatus}).
 		Count(&count).Error
 	return int(count), err
 }
