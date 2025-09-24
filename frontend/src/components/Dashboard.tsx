@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { DashboardLayout } from './DashboardLayout'
 import { DashboardOverview } from './DashboardOverview'
 import { dashboardApi, type User, type DashboardStats } from '../services/api'
 
@@ -8,7 +7,7 @@ interface DashboardProps {
   onLogout: () => Promise<void>
 }
 
-export function Dashboard({ user, onLogout }: DashboardProps) {
+export function Dashboard({}: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalTickets: 0,
     openTickets: 0,
@@ -45,34 +44,14 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
   if (loading) {
     return (
-      <DashboardLayout 
-        user={{
-          name: `${user.firstName} ${user.lastName}`,
-          email: user.email,
-          role: user.role
-        }} 
-        onLogout={onLogout}
-      >
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading dashboard...</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
-  return (
-    <DashboardLayout 
-      user={{
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        role: user.role
-      }} 
-      onLogout={onLogout}
-    >
-      <DashboardOverview stats={stats} />
-    </DashboardLayout>
-  )
+  return <DashboardOverview stats={stats} />
 }

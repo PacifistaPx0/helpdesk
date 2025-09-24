@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './components/LoginPage'
 import { Dashboard } from './components/Dashboard'
+import { AllTicketsPage } from './components/AllTicketsPage'
+import { DashboardLayout } from './components/DashboardLayout'
 import { authApi, type User } from './services/api'
 import './App.css'
 
@@ -70,23 +72,35 @@ function App() {
           path="/login" 
           element={
             user ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/" replace />
             ) : (
               <LoginPage onLogin={handleLogin} />
             )
           } 
         />
-        <Route 
-          path="/dashboard" 
-          element={
-            user ? (
-              <Dashboard user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-        <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+        
+        {/* Protected Dashboard Routes */}
+        {user ? (
+          <Route 
+            path="/" 
+            element={
+              <DashboardLayout 
+                user={{
+                  name: `${user.firstName} ${user.lastName}`,
+                  email: user.email,
+                  role: user.role
+                }} 
+                onLogout={handleLogout}
+              />
+            }
+          >
+            <Route index element={<Dashboard user={user} onLogout={handleLogout} />} />
+            <Route path="tickets" element={<AllTicketsPage />} />
+            <Route path="dashboard" element={<Navigate to="/" replace />} />
+          </Route>
+        ) : (
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        )}
       </Routes>
     </Router>
   )

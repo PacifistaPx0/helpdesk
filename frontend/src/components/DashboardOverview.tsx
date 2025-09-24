@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ticketsApi, type Ticket } from '../services/api'
 import { TicketDetailModal } from './TicketDetailModal'
 
@@ -22,6 +23,7 @@ interface TicketFilter {
 }
 
 export function DashboardOverview({ stats }: DashboardOverviewProps) {
+  const navigate = useNavigate()
   const [recentTickets, setRecentTickets] = useState<Ticket[]>([])
   const [loadingTickets, setLoadingTickets] = useState(true)
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>({ limit: 5 })
@@ -112,8 +114,7 @@ export function DashboardOverview({ stats }: DashboardOverviewProps) {
   }
 
   const handleViewAllTickets = () => {
-    // TODO: Navigate to dedicated tickets page
-    console.log('Navigate to full tickets page')
+    navigate('/tickets')
   }
 
   const resetFilter = () => {

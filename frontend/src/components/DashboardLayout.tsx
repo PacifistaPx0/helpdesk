@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
   user: {
     name: string
     email: string
@@ -10,16 +10,17 @@ interface DashboardLayoutProps {
   onLogout: () => void
 }
 
-export function DashboardLayout({ children, user, onLogout }: DashboardLayoutProps) {
+export function DashboardLayout({ user, onLogout }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
 
   const navigation = [
-    { name: 'Dashboard', href: '#', icon: 'chart', current: true },
-    { name: 'Tickets', href: '#', icon: 'ticket', current: false },
-    { name: 'My Tickets', href: '#', icon: 'user-ticket', current: false },
-    { name: 'Create Ticket', href: '#', icon: 'plus', current: false },
-    { name: 'Users', href: '#', icon: 'users', current: false, roles: ['admin', 'agent'] },
-    { name: 'Reports', href: '#', icon: 'chart-bar', current: false, roles: ['admin', 'agent'] },
+    { name: 'Dashboard', href: '/', icon: 'chart' },
+    { name: 'All Tickets', href: '/tickets', icon: 'ticket' },
+    { name: 'My Tickets', href: '/my-tickets', icon: 'user-ticket' },
+    { name: 'Create Ticket', href: '/create-ticket', icon: 'plus' },
+    { name: 'Users', href: '/users', icon: 'users', roles: ['admin', 'agent'] },
+    { name: 'Reports', href: '/reports', icon: 'chart-bar', roles: ['admin', 'agent'] },
   ]
 
   const filteredNavigation = navigation.filter(item => 
@@ -45,18 +46,18 @@ export function DashboardLayout({ children, user, onLogout }: DashboardLayoutPro
             {/* Navigation */}
             <nav className="mt-8 flex-1 px-2 space-y-1">
               {filteredNavigation.map((item) => (
-                <a
+                <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className={`${
-                    item.current
+                    location.pathname === item.href
                       ? 'bg-gray-900 text-white'
                       : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                   } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                 >
                   <NavIcon icon={item.icon} className="mr-3 h-5 w-5" />
                   {item.name}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
@@ -97,7 +98,14 @@ export function DashboardLayout({ children, user, onLogout }: DashboardLayoutPro
         {/* Header */}
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {location.pathname === '/' ? 'Dashboard' : 
+               location.pathname === '/tickets' ? 'All Tickets' :
+               location.pathname === '/my-tickets' ? 'My Tickets' :
+               location.pathname === '/create-ticket' ? 'Create Ticket' :
+               location.pathname === '/users' ? 'Users' :
+               location.pathname === '/reports' ? 'Reports' : 'Dashboard'}
+            </h1>
             <button
               onClick={onLogout}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
@@ -111,7 +119,7 @@ export function DashboardLayout({ children, user, onLogout }: DashboardLayoutPro
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {children}
+              <Outlet />
             </div>
           </div>
         </main>
