@@ -17,8 +17,7 @@ export function DashboardLayout({ user, onLogout }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: 'chart' },
     { name: 'All Tickets', href: '/tickets', icon: 'ticket' },
-    { name: 'My Tickets', href: '/my-tickets', icon: 'user-ticket' },
-    { name: 'Create Ticket', href: '/create-ticket', icon: 'plus' },
+    { name: 'Computers by OS', href: '/computers', icon: 'computer' },
     { name: 'Users', href: '/users', icon: 'users', roles: ['admin', 'agent'] },
     { name: 'Reports', href: '/reports', icon: 'chart-bar', roles: ['admin', 'agent'] },
   ]
@@ -28,32 +27,32 @@ export function DashboardLayout({ user, onLogout }: DashboardLayoutProps) {
   )
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex-1 flex flex-col min-h-0 bg-gray-800">
-          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-            {/* Logo */}
-            <div className="flex items-center flex-shrink-0 px-4">
-              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Enhanced Sidebar */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-40">
+        <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-b from-gray-900 to-gray-800 shadow-xl">
+          <div className="flex-1 flex flex-col pt-6 pb-4 overflow-y-auto">
+            {/* Enhanced Logo */}
+            <div className="flex items-center flex-shrink-0 px-6 mb-8">
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </div>
-              <h1 className="ml-3 text-white text-lg font-semibold">Help Desk</h1>
+              <h1 className="ml-4 text-white text-xl font-bold">Help Desk</h1>
             </div>
 
-            {/* Navigation */}
-            <nav className="mt-8 flex-1 px-2 space-y-1">
+            {/* Enhanced Navigation */}
+            <nav className="flex-1 px-4 space-y-2">
               {filteredNavigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`${
                     location.pathname === item.href
-                      ? 'bg-gray-900 text-white'
+                      ? 'bg-blue-600 text-white shadow-lg'
                       : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                  } group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:shadow-md`}
                 >
                   <NavIcon icon={item.icon} className="mr-3 h-5 w-5" />
                   {item.name}
@@ -62,17 +61,23 @@ export function DashboardLayout({ user, onLogout }: DashboardLayoutProps) {
             </nav>
           </div>
 
-          {/* User info */}
-          <div className="flex-shrink-0 flex bg-gray-700 p-4">
+          {/* Enhanced User info */}
+          <div className="flex-shrink-0 flex bg-gradient-to-r from-gray-800 to-gray-700 p-6 mx-4 mb-4 rounded-xl shadow-lg">
             <div className="flex items-center">
-              <div className="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-white">
-                  {user.name.split(' ').map(n => n[0]).join('')}
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-sm font-bold text-white">
+                  {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : user?.email?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-white">{user.name}</p>
-                <p className="text-xs text-gray-400 capitalize">{user.role}</p>
+              <div className="ml-4">
+                <p className="text-sm font-semibold text-white truncate max-w-32">{user?.name || user?.email || 'Unknown User'}</p>
+                <div className="flex items-center mt-1">
+                  <div className={`h-2 w-2 rounded-full mr-2 ${
+                    user?.role === 'Admin' ? 'bg-red-400' : 
+                    user?.role === 'Agent' ? 'bg-yellow-400' : 'bg-green-400'
+                  }`}></div>
+                  <p className="text-xs text-gray-300 capitalize">{user?.role?.toLowerCase() || 'user'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -95,21 +100,31 @@ export function DashboardLayout({ user, onLogout }: DashboardLayoutProps) {
           </button>
         </div>
 
-        {/* Header */}
-        <header className="bg-white shadow">
+        {/* Enhanced Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               {location.pathname === '/' ? 'Dashboard' : 
                location.pathname === '/tickets' ? 'All Tickets' :
-               location.pathname === '/my-tickets' ? 'My Tickets' :
-               location.pathname === '/create-ticket' ? 'Create Ticket' :
+               location.pathname === '/computers' ? 'Computers by OS' :
                location.pathname === '/users' ? 'Users' :
                location.pathname === '/reports' ? 'Reports' : 'Dashboard'}
-            </h1>
+              </h1>
+              <div className="mt-1 flex items-center text-sm text-gray-500">
+                <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
             <button
               onClick={onLogout}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+              className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 px-6 py-3 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center"
             >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
               Sign out
             </button>
           </div>
@@ -159,6 +174,11 @@ function NavIcon({ icon, className }: { icon: string; className: string }) {
     'chart-bar': (
       <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+    computer: (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
     ),
   }

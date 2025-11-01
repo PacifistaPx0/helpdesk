@@ -81,19 +81,13 @@ export function CreateTicketModal({ isOpen, onClose, onTicketCreated }: CreateTi
     setLoading(true)
     setError(null)
 
-    console.log('📝 CreateTicketModal - Form data:', formData)
-    
-    const ticketPayload = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      priority: formData.priority, // API will handle the transformation
-      category: formData.category.trim()
-    }
-    
-    console.log('📝 CreateTicketModal - Ticket payload:', ticketPayload)
-
     try {
-      const newTicket = await ticketsApi.createTicket(ticketPayload)
+      const newTicket = await ticketsApi.createTicket({
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        priority: formData.priority, // API will handle the transformation
+        category: formData.category.trim()
+      })
 
       if (onTicketCreated) {
         onTicketCreated(newTicket)

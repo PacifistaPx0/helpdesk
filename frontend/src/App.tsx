@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { LoginPage } from './components/LoginPage'
 import { Dashboard } from './components/Dashboard'
 import { AllTicketsPage } from './components/AllTicketsPage'
+import { ComputersByOSPage } from './components/ComputersByOSPage'
 import { DashboardLayout } from './components/DashboardLayout'
 import { authApi, type User } from './services/api'
 import './App.css'
@@ -86,7 +87,9 @@ function App() {
             element={
               <DashboardLayout 
                 user={{
-                  name: `${user.firstName} ${user.lastName}`,
+                  name: user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}`.trim()
+                    : user.firstName || user.lastName || user.email.split('@')[0],
                   email: user.email,
                   role: user.role
                 }} 
@@ -96,6 +99,7 @@ function App() {
           >
             <Route index element={<Dashboard user={user} onLogout={handleLogout} />} />
             <Route path="tickets" element={<AllTicketsPage />} />
+            <Route path="computers" element={<ComputersByOSPage />} />
             <Route path="dashboard" element={<Navigate to="/" replace />} />
           </Route>
         ) : (

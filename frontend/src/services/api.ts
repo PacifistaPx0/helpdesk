@@ -188,14 +188,7 @@ class ApiClient {
       headers,
     }
 
-    // Debug logging for requests
-    if (endpoint.includes('/tickets') && options.method === 'POST') {
-      console.log('🌐 HTTP Request Debug:')
-      console.log('  URL:', url)
-      console.log('  Method:', options.method)
-      console.log('  Headers:', headers)
-      console.log('  Body:', options.body)
-    }
+
 
     try {
       const response = await fetch(url, config)
@@ -218,19 +211,7 @@ class ApiClient {
           throw new Error('Authentication failed')
         }
 
-        // Debug logging for errors
-        if (endpoint.includes('/tickets') && options.method === 'POST') {
-          console.error('🚨 HTTP Error Response:')
-          console.error('  Status:', response.status)
-          console.error('  StatusText:', response.statusText)
-        }
-
         const errorData = await response.json().catch(() => ({}))
-        
-        // Additional debug logging for ticket creation errors
-        if (endpoint.includes('/tickets') && options.method === 'POST') {
-          console.error('  Error Data:', errorData)
-        }
         
         throw new ApiErrorClass(
           errorData.message || `HTTP ${response.status}: ${response.statusText}`
@@ -358,13 +339,8 @@ class ApiClient {
     priority: string
     category: string
   }): Promise<Ticket> {
-    console.log('🎫 CreateTicket - Input ticket:', ticket)
-    
     // Get current user profile to get requester_id
     const profile = await this.getProfile()
-    console.log('👤 CreateTicket - User profile:', profile)
-    console.log('👤 CreateTicket - Profile ID type:', typeof profile.id, 'value:', profile.id)
-    console.log('👤 CreateTicket - parseInt result:', parseInt(profile.id))
     
     // Transform frontend format to backend format
     const backendTicket = {
@@ -375,21 +351,13 @@ class ApiClient {
       requester_id: parseInt(profile.id) // Add required requester_id
     }
     
-    console.log('📤 CreateTicket - Sending to backend:', backendTicket)
-    console.log('📤 CreateTicket - JSON payload:', JSON.stringify(backendTicket, null, 2))
-    
     const response = await this.request<BackendTicket>('/tickets', {
       method: 'POST',
       body: JSON.stringify(backendTicket),
     })
     
-    console.log('📥 CreateTicket - Backend response:', response)
-    
     // Transform backend response to frontend format
-    const transformedTicket = transformBackendTicket(response)
-    console.log('✅ CreateTicket - Transformed ticket:', transformedTicket)
-    
-    return transformedTicket
+    return transformBackendTicket(response)
   }
 
   async updateTicket(id: string, updates: Partial<Ticket>): Promise<Ticket> {
@@ -439,6 +407,77 @@ class ApiClient {
     const backendTickets = await this.request<BackendTicket[]>(`/tickets/recent?limit=${limit}`)
     return (backendTickets || []).map(transformBackendTicket)
   }
+
+  // Computer methods
+  async getComputers(params?: {
+    os?: string
+    status?: string
+    assignee_id?: number
+    location?: string
+    search?: string
+    page?: number
+    limit?: number
+  }): Promise<{ computers: Computer[]; total: number; page: number; limit: number; pages: number }> {
+    const searchParams = new URLSearchParams()
+    
+    if (params?.os) searchParams.append('os', params.os)
+    if (params?.status) searchParams.append('status', params.status)
+    if (params?.assignee_id) searchParams.append('assignee_id', params.assignee_id.toString())
+    if (params?.location) searchParams.append('location', params.location)
+    if (params?.search) searchParams.append('search', params.search)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.limit) searchParams.append('limit', params.limit.toString())
+
+    const query = searchParams.toString()
+    return this.request<{ computers: Computer[]; total: number; page: number; limit: number; pages: number }>(
+      `/computers${query ? `?${query}` : ''}`
+    )
+  }
+
+  async getComputer(id: number): Promise<Computer> {
+    return this.request<Computer>(`/computers/${id}`)
+  }
+
+  async getComputersByOS(): Promise<Record<string, Computer[]>> {
+    return this.request<Record<string, Computer[]>>('/computers/by-os')
+  }
+
+  async getComputerStats(): Promise<ComputerStats> {
+    return this.request<ComputerStats>('/computers/stats')
+  }
+
+  async createComputer(computer: Omit<Computer, 'id' | 'created_at' | 'updated_at' | 'assignee'>): Promise<Computer> {
+    return this.request<Computer>('/computers', {
+      method: 'POST',
+      body: JSON.stringify(computer),
+    })
+  }
+
+  async updateComputer(id: number, updates: Partial<Computer>): Promise<Computer> {
+    return this.request<Computer>(`/computers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteComputer(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/computers/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async assignComputer(computerId: number, userId: number): Promise<Computer> {
+    return this.request<Computer>(`/computers/${computerId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    })
+  }
+
+  async unassignComputer(computerId: number): Promise<Computer> {
+    return this.request<Computer>(`/computers/${computerId}/unassign`, {
+      method: 'POST',
+    })
+  }
 }
 
 // Export a singleton instance
@@ -467,3 +506,60 @@ export const dashboardApi = {
   getStats: () => apiClient.getDashboardStats(),
   getRecentTickets: (limit?: number) => apiClient.getRecentTickets(limit),
 }
+
+// Computer types
+export interface Computer {
+  id: number
+  hostname: string
+  os: string
+  os_version?: string
+  manufacturer: string
+  model: string
+  serial_number: string
+  status: 'active' | 'inactive' | 'maintenance' | 'retired'
+  cpu?: string
+  ram?: string
+  storage?: string
+  ip_address?: string
+  mac_address?: string
+  purchase_date?: string
+  warranty_expiry?: string
+  purchase_cost: number
+  assignee_id?: number
+  assignee?: User
+  location: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ComputerStats {
+  total: number
+  by_status: {
+    active: number
+    inactive: number
+    maintenance: number
+    retired: number
+  }
+  by_os: Record<string, number>
+  assigned: number
+  unassigned: number
+}
+
+// Export computer API methods
+export const computersApi = {
+  getComputers: (params?: Parameters<typeof apiClient.getComputers>[0]) => 
+    apiClient.getComputers(params),
+  getComputer: (id: number) => apiClient.getComputer(id),
+  getComputersByOS: () => apiClient.getComputersByOS(),
+  getComputerStats: () => apiClient.getComputerStats(),
+  createComputer: (computer: Parameters<typeof apiClient.createComputer>[0]) => 
+    apiClient.createComputer(computer),
+  updateComputer: (id: number, updates: Parameters<typeof apiClient.updateComputer>[1]) => 
+    apiClient.updateComputer(id, updates),
+  deleteComputer: (id: number) => apiClient.deleteComputer(id),
+  assignComputer: (computerId: number, userId: number) => 
+    apiClient.assignComputer(computerId, userId),
+  unassignComputer: (computerId: number) => apiClient.unassignComputer(computerId),
+}
+

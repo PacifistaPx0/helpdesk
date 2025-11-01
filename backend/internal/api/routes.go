@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(router *gin.Engine, userService *service.UserService, ticketService *service.TicketService, commentService *service.CommentService, jwtService *auth.JWTService) {
+func SetupRoutes(router *gin.Engine, userService *service.UserService, ticketService *service.TicketService, commentService *service.CommentService, computerService *service.ComputerService, jwtService *auth.JWTService) {
 	api := router.Group("/api/v1")
 
 	// Health check
@@ -68,6 +68,21 @@ func SetupRoutes(router *gin.Engine, userService *service.UserService, ticketSer
 			comments.GET("/ticket/:ticketId", listCommentsHandler(commentService))
 			comments.PUT("/:id", updateCommentHandler(commentService))
 			comments.DELETE("/:id", deleteCommentHandler(commentService))
+		}
+
+		// Computer routes
+		computerHandler := NewComputerHandler(computerService)
+		computers := protected.Group("/computers")
+		{
+			computers.POST("", auth.RequireAdminOrAgent(), computerHandler.CreateComputer)
+			computers.GET("", computerHandler.GetAllComputers)
+			computers.GET("/by-os", computerHandler.GetComputersByOS)
+			computers.GET("/stats", computerHandler.GetComputerStats)
+			computers.GET("/:id", computerHandler.GetComputer)
+			computers.PUT("/:id", auth.RequireAdminOrAgent(), computerHandler.UpdateComputer)
+			computers.DELETE("/:id", auth.RequireAdmin(), computerHandler.DeleteComputer)
+			computers.POST("/:id/assign", auth.RequireAdminOrAgent(), computerHandler.AssignComputer)
+			computers.POST("/:id/unassign", auth.RequireAdminOrAgent(), computerHandler.UnassignComputer)
 		}
 	}
 }

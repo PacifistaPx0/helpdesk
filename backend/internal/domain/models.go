@@ -141,3 +141,54 @@ type SLA struct {
 	UpdatedAt           time.Time      `json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`
 }
+
+// ComputerStatus defines the operational status of a computer
+type ComputerStatus string
+
+const (
+	ActiveStatus      ComputerStatus = "active"
+	InactiveStatus    ComputerStatus = "inactive"
+	MaintenanceStatus ComputerStatus = "maintenance"
+	RetiredStatus     ComputerStatus = "retired"
+)
+
+// Computer represents a computer asset in the organization
+type Computer struct {
+	ID           uint           `json:"id" gorm:"primaryKey"`
+	Hostname     string         `json:"hostname" gorm:"not null;uniqueIndex"`
+	OS           string         `json:"os" gorm:"not null;index"` // e.g., Windows, macOS, Linux, etc.
+	OSVersion    string         `json:"os_version"`               // e.g., Windows 11, macOS Sonoma, Ubuntu 22.04
+	Manufacturer string         `json:"manufacturer"`             // e.g., Dell, HP, Apple, Lenovo
+	Model        string         `json:"model"`                    // e.g., Latitude 5420, MacBook Pro
+	SerialNumber string         `json:"serial_number" gorm:"uniqueIndex"`
+	Status       ComputerStatus `json:"status" gorm:"not null;default:'active';index"`
+
+	// Hardware Specifications
+	CPU     string `json:"cpu"`     // e.g., Intel Core i7-11800H
+	RAM     string `json:"ram"`     // e.g., 16GB DDR4
+	Storage string `json:"storage"` // e.g., 512GB SSD
+
+	// Network Information
+	IPAddress  string `json:"ip_address"`
+	MACAddress string `json:"mac_address"`
+
+	// Purchase and Warranty Information
+	PurchaseDate   *time.Time `json:"purchase_date"`
+	WarrantyExpiry *time.Time `json:"warranty_expiry"`
+	PurchaseCost   float64    `json:"purchase_cost"`
+
+	// Assignment Information
+	AssigneeID *uint `json:"assignee_id" gorm:"index"`
+	Assignee   *User `json:"assignee,omitempty" gorm:"foreignKey:AssigneeID"`
+
+	// Location and Notes
+	Location string `json:"location"` // e.g., Office, Remote, Warehouse
+	Notes    string `json:"notes" gorm:"type:text"`
+
+	// Timestamps
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
+	LastMaintenace  *time.Time     `json:"last_maintenance"`
+	NextMaintenance *time.Time     `json:"next_maintenance"`
+}

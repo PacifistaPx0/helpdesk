@@ -117,7 +117,7 @@ func initDatabase(databaseURL string) (*gorm.DB, error) {
 	log.Println("SUCCESS: Database connected successfully")
 
 	// Auto-migrate the schema
-	err = db.AutoMigrate(&domain.User{}, &domain.Ticket{}, &domain.Comment{}, &domain.SLA{})
+	err = db.AutoMigrate(&domain.User{}, &domain.Ticket{}, &domain.Comment{}, &domain.SLA{}, &domain.Computer{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)
 	}
@@ -177,11 +177,13 @@ func setupFullAPI(router *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	userRepo := repository.NewUserRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
+	computerRepo := repository.NewComputerRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	ticketService := service.NewTicketService(ticketRepo)
 	commentService := service.NewCommentService(commentRepo)
+	computerService := service.NewComputerService(computerRepo, userRepo)
 
 	// Initialize JWT service
 	jwtService := auth.NewJWTService(
@@ -191,7 +193,7 @@ func setupFullAPI(router *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	)
 
 	// Setup API routes with JWT authentication
-	api.SetupRoutes(router, userService, ticketService, commentService, jwtService)
+	api.SetupRoutes(router, userService, ticketService, commentService, computerService, jwtService)
 
 	log.Println("SUCCESS: Full API setup complete with JWT authentication!")
 }
