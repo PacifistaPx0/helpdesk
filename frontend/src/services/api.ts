@@ -188,6 +188,15 @@ class ApiClient {
       headers,
     }
 
+    // Debug logging for requests
+    if (endpoint.includes('/tickets') && options.method === 'POST') {
+      console.log('🌐 HTTP Request Debug:')
+      console.log('  URL:', url)
+      console.log('  Method:', options.method)
+      console.log('  Headers:', headers)
+      console.log('  Body:', options.body)
+    }
+
     try {
       const response = await fetch(url, config)
       
@@ -209,7 +218,20 @@ class ApiClient {
           throw new Error('Authentication failed')
         }
 
+        // Debug logging for errors
+        if (endpoint.includes('/tickets') && options.method === 'POST') {
+          console.error('🚨 HTTP Error Response:')
+          console.error('  Status:', response.status)
+          console.error('  StatusText:', response.statusText)
+        }
+
         const errorData = await response.json().catch(() => ({}))
+        
+        // Additional debug logging for ticket creation errors
+        if (endpoint.includes('/tickets') && options.method === 'POST') {
+          console.error('  Error Data:', errorData)
+        }
+        
         throw new ApiErrorClass(
           errorData.message || `HTTP ${response.status}: ${response.statusText}`
         )
@@ -282,7 +304,8 @@ class ApiClient {
   }
 
   async getProfile(): Promise<User> {
-    return this.request<User>('/profile')
+    const response = await this.request<{ user: BackendUser }>('/profile')
+    return transformBackendUser(response.user)
   }
 
   // Ticket methods
@@ -335,10 +358,38 @@ class ApiClient {
     priority: string
     category: string
   }): Promise<Ticket> {
-    return this.request<Ticket>('/tickets', {
+    console.log('🎫 CreateTicket - Input ticket:', ticket)
+    
+    // Get current user profile to get requester_id
+    const profile = await this.getProfile()
+    console.log('👤 CreateTicket - User profile:', profile)
+    console.log('👤 CreateTicket - Profile ID type:', typeof profile.id, 'value:', profile.id)
+    console.log('👤 CreateTicket - parseInt result:', parseInt(profile.id))
+    
+    // Transform frontend format to backend format
+    const backendTicket = {
+      title: ticket.title,
+      description: ticket.description,
+      priority: ticket.priority.toLowerCase(), // Convert to backend format (low, medium, high, critical)
+      category: ticket.category,
+      requester_id: parseInt(profile.id) // Add required requester_id
+    }
+    
+    console.log('📤 CreateTicket - Sending to backend:', backendTicket)
+    console.log('📤 CreateTicket - JSON payload:', JSON.stringify(backendTicket, null, 2))
+    
+    const response = await this.request<BackendTicket>('/tickets', {
       method: 'POST',
-      body: JSON.stringify(ticket),
+      body: JSON.stringify(backendTicket),
     })
+    
+    console.log('📥 CreateTicket - Backend response:', response)
+    
+    // Transform backend response to frontend format
+    const transformedTicket = transformBackendTicket(response)
+    console.log('✅ CreateTicket - Transformed ticket:', transformedTicket)
+    
+    return transformedTicket
   }
 
   async updateTicket(id: string, updates: Partial<Ticket>): Promise<Ticket> {

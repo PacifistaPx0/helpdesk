@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ticketsApi, type Ticket } from '../services/api'
 import { TicketDetailModal } from './TicketDetailModal'
+import { CreateTicketModal } from './CreateTicketModal'
 
 interface AllTicketsPageProps {}
 
@@ -42,6 +43,7 @@ export function AllTicketsPage({}: AllTicketsPageProps) {
   // Modal state
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Search debouncing
   const [searchInput, setSearchInput] = useState(filters.search)
@@ -175,6 +177,17 @@ export function AllTicketsPage({}: AllTicketsPageProps) {
     ))
   }
 
+  const handleTicketCreated = (newTicket: Ticket) => {
+    // Add new ticket to the beginning of the list
+    setTickets(prevTickets => [newTicket, ...prevTickets])
+    // Update total count
+    setTotalTickets(prev => prev + 1)
+    // Recalculate total pages if needed
+    if (filters.limit) {
+      setTotalPages(Math.ceil((totalTickets + 1) / filters.limit))
+    }
+  }
+
   const handleQuickStatusUpdate = async (ticketId: string, newStatus: string) => {
     try {
       const updatedTicket = await ticketsApi.updateTicket(ticketId, { status: newStatus as any })
@@ -255,7 +268,10 @@ export function AllTicketsPage({}: AllTicketsPageProps) {
             </svg>
             Export
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
             <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -644,6 +660,13 @@ export function AllTicketsPage({}: AllTicketsPageProps) {
           setSelectedTicketId(null)
         }}
         onTicketUpdated={handleTicketUpdated}
+      />
+
+      {/* Create Ticket Modal */}
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onTicketCreated={handleTicketCreated}
       />
     </div>
   )
